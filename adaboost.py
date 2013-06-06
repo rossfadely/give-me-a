@@ -28,7 +28,7 @@ class AdaBoost(object):
         self.indications = self.get_indications()
 
         # run AdaBoost
-        self.run(maxiter,beta_fraction)
+        self.run(maxiter, beta_fraction)
 
     def get_indications(self):
         """
@@ -54,11 +54,11 @@ class AdaBoost(object):
         """
         return 0.5 * np.log((1. - error_rate) / error_rate)
 
-    def update_weights(self,alpha,ind):
+    def update_weights(self, alpha, ind):
         """
         Update the running weights
         """
-        inside = -alpha * self.labels * self.predictions[ind,:]
+        inside = -alpha * self.labels * self.predictions[ind, :]
         new_weights = self.weights * np.exp(inside)
         self.weights = new_weights / np.sum(new_weights)
 
@@ -67,7 +67,7 @@ class AdaBoost(object):
         Run AdaBoost, return boosted predictions
         """
         for i in range(maxiter):
-            
+
             # get best error rate, assess stopping criterion
             errors = self.get_weighted_error_rate()
             abs_diffs = np.abs(0.5 - errors)
@@ -89,10 +89,10 @@ class AdaBoost(object):
 
             # get alpha and update weights
             self.alphas[i] = self.get_alpha(self.error_rates[i])
-            self.update_weights(self.alphas[i],self.classifiers[i])
+            self.update_weights(self.alphas[i], self.classifiers[i])
 
         if (i == maxiter - 1):
             print 'Warning: ran for maxiters'
 
-        new = self.alphas[:, None] * self.predictions[self.classfiers,:]
+        new = self.alphas[:, None] * self.predictions[self.classfiers, :]
         return np.sign(np.sum(new), axis=0)
