@@ -11,9 +11,9 @@ class AdaBoost(object):
         # basic checks
         assert labels.shape[0] == predictions.shape[1], \
             '1D label array must be same size as Ncols in predictions'
-        assert np.in1d(predictions.ravel(), np.array[-1, 1]), \
+        assert np.all(np.in1d(predictions.ravel(), np.array([-1, 1]))), \
             'Predicted class labels must be either -1 or 1'
-        assert np.in1d(labels, np.array[-1, 1]), \
+        assert np.all(np.in1d(labels, np.array([-1, 1]))), \
             'Predicted class labels must be either -1 or 1'
 
         # define
@@ -27,8 +27,8 @@ class AdaBoost(object):
         # get indications
         self.indications = self.get_indications()
 
-        # run AdaBoost
-        self.run(maxiter, beta_fraction)
+        # train AdaBoost
+        self.train(maxiter, beta_fraction)
 
     def get_indications(self):
         """
@@ -36,7 +36,7 @@ class AdaBoost(object):
         """
         indications = np.zeros_like(self.predictions)
         for i in range(self.predictions.shape[0]):
-            ind = np.where(self.predictions[i, :]-self.labels == 0.0)[0]
+            ind = np.where(self.predictions[i, :] - self.labels != 0.0)[0]
             indications[i, ind] = 1.0
 
         return indications
@@ -45,7 +45,7 @@ class AdaBoost(object):
         """
         Return current weighted error rate.
         """
-        eps = self.weights[None, :] * indications
+        eps = self.weights[None, :] * self.indications
         return np.sum(eps, axis=1)
 
     def get_alpha(self, error_rate, func='default'):
@@ -62,7 +62,7 @@ class AdaBoost(object):
         new_weights = self.weights * np.exp(inside)
         self.weights = new_weights / np.sum(new_weights)
 
-    def run(self, maxiter, beta_fraction):
+    def train(self, maxiter, beta_fraction):
         """
         Run AdaBoost, return boosted predictions
         """
@@ -73,6 +73,8 @@ class AdaBoost(object):
             abs_diffs = np.abs(0.5 - errors)
             current_best = np.max(abs_diffs)
             ind = np.where(abs_diffs == current_best)[0]
+            if ind.shape[0] != 0:
+                ind = ind[0]
             if i == 0:
                 beta = current_best * beta_fraction
             if current_best < beta:
@@ -84,8 +86,6 @@ class AdaBoost(object):
             # assign
             self.classifiers[i] = ind
             self.error_rates[i] = errors[ind]
-            assert errors[ind] < 0.5, \
-                'Error rate is greater than 0.5, what gives?'
 
             # get alpha and update weights
             self.alphas[i] = self.get_alpha(self.error_rates[i])
@@ -94,5 +94,12 @@ class AdaBoost(object):
         if (i == maxiter - 1):
             print 'Warning: ran for maxiters'
 
-        new = self.alphas[:, None] * self.predictions[self.classfiers, :]
-        return np.sign(np.sum(new), axis=0)
+    def predict(self, predictions):
+        """
+        Predict classes after training AdaBoost
+        """
+        assert self.predictions.shape == predictions.shape, \
+            'Predictions shape is not the same as the training predictions\'.'
+
+        new = self.alphas[:, None] * predictions[self.classifiers, :]
+        return np.sign(np.sum(new, axis=0))
